@@ -1,0 +1,259 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.AttendanceImportModel
+@using DepEdDTRSystem.Services
+@{
+    ViewData["Title"] = "Import attendance log";
+    static string F(TimeOnly time) => time.ToString("h:mm tt");
+    var plan = Model.Plan;
+    var conflictRows = plan?.Rows.Select((row, index) => (row, index)).Where(x => x.row.HasConflict).ToList() ?? [];
+    var readyRows = plan?.Rows.Select((row, index) => (row, index)).Where(x => !x.row.HasConflict).ToList() ?? [];
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">Administration</p>
+        <h1 class="mb-1">Import attendance log</h1>
+        <p class="text-secondary mb-0">Upload the biometric text file, review any duplicate In/Out scans, then save to the attendance records.</p>
+    </div>
+    <a asp-page="/Admin/Reports" class="btn btn-outline-secondary">Back to DTR Reports</a>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert @(TempData["StatusTone"] as string == "warning" ? "alert-warning" : "alert-success")" role="status">@statusMessage</div>
+}
+@if (Model.ErrorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (plan is null)
+{
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5">1. Upload the text file</h2>
+                    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="logFile" class="form-label">Attendance text file</label>
+                            <input id="logFile" name="logFile" type="file" class="form-control" accept=".txt,.dat,.log,.csv,text/plain" required />
+                            <div class="form-text">.txt, .dat, .log or .csv, up to 5 MB.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Read file and preview</button>
+                    </form>
+                    <p class="small text-secondary mt-3 mb-0">Nothing is saved yet. You will see a preview first.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5">How the file is read</h2>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td>Employee ID (the Badgenumber)</td></tr>
+                            <tr><td>2</td><td>Date and time, e.g. <code>2026-10-05 07:30:12</code></td></tr>
+                            <tr><td>6</td><td><code>I</code> = Time In, <code>O</code> = Time Out</td></tr>
+                        </tbody>
+                    </table>
+                    <ul class="small text-secondary mb-0">
+                        <li>Columns are separated by tabs (commas, semicolons or <code>|</code> also work).</li>
+                        <li><strong>AM or PM:</strong> before 12:00 noon is AM, 12:00 onward is PM. A Time Out between 12:00 and 12:59 is treated as the lunch (AM) Time Out.</li>
+                        <li>If an employee has more than one In or Out in the same half of the day, you choose which one to keep.</li>
+                        <li>Times that are already saved are never overwritten unless you choose the new time.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-3">Preview of <span class="text-secondary">@plan.FileName</span></h2>
+            <p class="mb-2">
+                <span class="badge text-bg-secondary">@plan.PunchCount scans read</span>
+                <span class="badge @(conflictRows.Count > 0 ? "text-bg-warning" : "text-bg-secondary")">@conflictRows.Count day(s) need your choice</span>
+                <span class="badge text-bg-success">@readyRows.Count day(s) ready to save</span>
+                <span class="badge text-bg-secondary">@plan.AlreadyMatchingDays day(s) already match</span>
+                @if (plan.UnmatchedEmployees.Count > 0)
+                {
+                    <span class="badge text-bg-danger">@plan.UnmatchedEmployees.Count unknown employee ID(s)</span>
+                }
+                @if (plan.Issues.Count > 0)
+                {
+                    <span class="badge text-bg-danger">@plan.Issues.Count line(s) skipped</span>
+                }
+            </p>
+            @if (plan.UnmatchedEmployees.Count > 0)
+            {
+                <details class="mb-2">
+                    <summary class="small">Employee IDs not found (their scans are ignored)</summary>
+                    <ul class="small mb-0 mt-2">
+                        @foreach (var (badge, count) in plan.UnmatchedEmployees.Take(100))
+                        {
+                            <li><strong>@badge</strong> — @count scan(s)</li>
+                        }
+                    </ul>
+                </details>
+            }
+            @if (plan.Issues.Count > 0)
+            {
+                <details>
+                    <summary class="small">Lines that could not be read</summary>
+                    <ul class="small mb-0 mt-2">
+                        @foreach (var issue in plan.Issues.Take(50))
+                        {
+                            <li>Line @issue.LineNumber: @issue.Message <code>@issue.Text</code></li>
+                        }
+                        @if (plan.Issues.Count > 50)
+                        {
+                            <li>…and @(plan.Issues.Count - 50) more.</li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+    </div>
+
+    @if (plan.Rows.Count == 0)
+    {
+        <div class="alert alert-info">Nothing new to import: every scan in the file already matches the saved attendance records.</div>
+        <a asp-page="/Admin/AttendanceImport" class="btn btn-outline-secondary">Upload another file</a>
+    }
+    else
+    {
+        <form method="post" asp-page-handler="Confirm">
+            <input type="hidden" name="token" value="@plan.Token" />
+
+            @if (conflictRows.Count > 0)
+            {
+                <div class="card mb-4 border-warning">
+                    <div class="card-body p-4">
+                        <h2 class="h5">Choose which scan to keep</h2>
+                        <p class="text-secondary small">
+                            These days have more than one In or Out in the same half of the day, or a different time than what is already saved.
+                            A suggested choice is selected (earliest In, latest Out, or the time already saved). <strong>Skip</strong> leaves that time as it is.
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle att-table">
+                                <thead>
+                                    <tr><th>Employee</th><th>Date</th>
+                                        @foreach (var slot in AttendanceImportModel.AllSlots)
+                                        {
+                                            <th>@AttendanceImportRow.Label(slot)</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var (row, index) in conflictRows)
+                                    {
+                                        <tr>
+                                            <td><div class="fw-semibold">@row.EmployeeName</div><div class="small text-secondary">@row.BadgeNumber</div></td>
+                                            <td class="text-nowrap">@row.Date.ToString("ddd, MMM d, yyyy")</td>
+                                            @foreach (var slot in AttendanceImportModel.AllSlots)
+                                            {
+                                                var existing = row.Existing[(int)slot];
+                                                var options = row.Options(slot);
+                                                var defaultChoice = row.DefaultChoice(slot);
+                                                var fieldName = $"choices[{index}_{slot}]";
+                                                if (row.IsConflict(slot))
+                                                {
+                                                    <td class="att-conflict">
+                                                        <div class="att-choice">
+                                                            @if (existing is { } saved)
+                                                            {
+                                                                <label><input type="radio" name="@fieldName" value="e" checked="@(defaultChoice == "e")" /> <span>@F(saved)</span> <small class="att-saved">saved</small></label>
+                                                            }
+                                                            @for (var k = 0; k < options.Count; k++)
+                                                            {
+                                                                <label><input type="radio" name="@fieldName" value="@k" checked="@(defaultChoice == k.ToString())" /> <span>@F(options[k])</span> <small class="att-new">scan</small></label>
+                                                            }
+                                                            <label><input type="radio" name="@fieldName" value="x" /> <span class="text-secondary">Skip</span></label>
+                                                        </div>
+                                                    </td>
+                                                }
+                                                else if (existing is { } kept)
+                                                {
+                                                    <td><span class="att-saved">@F(kept)</span> <small class="att-saved">saved</small></td>
+                                                }
+                                                else if (options.Count == 1)
+                                                {
+                                                    <td><span class="att-new">@F(options[0])</span> <small class="att-new">new</small></td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="text-secondary">—</td>
+                                                }
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (readyRows.Count > 0)
+            {
+                <div class="card mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5">Ready to save</h2>
+                        <p class="text-secondary small">These days have no duplicates; the new times fill empty spots.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle att-table">
+                                <thead>
+                                    <tr><th>Employee</th><th>Date</th>
+                                        @foreach (var slot in AttendanceImportModel.AllSlots)
+                                        {
+                                            <th>@AttendanceImportRow.Label(slot)</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var (row, _) in readyRows.Take(300))
+                                    {
+                                        <tr>
+                                            <td><div class="fw-semibold">@row.EmployeeName</div><div class="small text-secondary">@row.BadgeNumber</div></td>
+                                            <td class="text-nowrap">@row.Date.ToString("ddd, MMM d, yyyy")</td>
+                                            @foreach (var slot in AttendanceImportModel.AllSlots)
+                                            {
+                                                var existing = row.Existing[(int)slot];
+                                                var options = row.Options(slot);
+                                                if (existing is { } kept)
+                                                {
+                                                    <td><span class="att-saved">@F(kept)</span> <small class="att-saved">saved</small></td>
+                                                }
+                                                else if (options.Count == 1)
+                                                {
+                                                    <td><span class="att-new">@F(options[0])</span> <small class="att-new">new</small></td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="text-secondary">—</td>
+                                                }
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (readyRows.Count > 300)
+                        {
+                            <p class="small text-secondary mb-0">Showing the first 300 of @readyRows.Count days. All of them will be saved.</p>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button type="submit" class="btn btn-primary">Save @plan.Rows.Count day(s) to attendance records</button>
+                <a asp-page="/Admin/AttendanceImport" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    }
+}

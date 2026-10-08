@@ -1,0 +1,179 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.ProfileModel
+@{
+    ViewData["Title"] = "Information";
+    var emp = Model.Employee;
+    var fullName = string.Join(' ', new[] { emp.FirstName, emp.MiddleName, emp.LastName, emp.Suffix }
+        .Where(x => !string.IsNullOrWhiteSpace(x)));
+}
+
+<section class="school-dashboard">
+    <header class="dashboard-heading">
+        <div>
+            <p class="dashboard-eyebrow">MY ACCOUNT</p>
+            <h1>Information</h1>
+            <p class="dashboard-intro">Manage your photo, contact details and password.</p>
+        </div>
+        <a asp-page="/Employee/Dashboard" class="btn btn-outline-secondary">Back to dashboard</a>
+    </header>
+
+    @if (Model.StatusMessage is not null)
+    {
+        <div class="alert alert-success" role="status">@Model.StatusMessage</div>
+    }
+    @if (Model.ErrorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="dashboard-panel emp-profile-card">
+                <div id="avatar-preview" class="emp-profile-avatar">
+                    <partial name="_EmployeeAvatar" model="Model.Avatar" />
+                </div>
+                <h2 class="h5 mb-1">@fullName</h2>
+                <p class="text-secondary mb-2">@emp.Position</p>
+                <p class="mb-3">
+                    @if (!string.IsNullOrWhiteSpace(emp.Department))
+                    {
+                        <span class="emp-chip emp-chip-soft">@emp.Department</span>
+                    }
+                    <span class="emp-chip emp-chip-soft">ID @emp.EmployeeId</span>
+                </p>
+
+                <form method="post" asp-page-handler="Photo" enctype="multipart/form-data" class="emp-photo-form">
+                    <label for="photoFile" class="form-label small fw-semibold">Profile photo</label>
+                    <input id="photoFile" name="photoFile" type="file" class="form-control form-control-sm"
+                           accept="image/jpeg,image/png,image/webp" />
+                    <div class="form-text">JPG, PNG or WebP, up to 2 MB. Square photos look best.</div>
+                    <button type="submit" id="photo-submit" class="btn btn-primary btn-sm w-100 mt-2" disabled>Upload photo</button>
+                </form>
+                @if (Model.HasPhoto)
+                {
+                    <form method="post" asp-page-handler="RemovePhoto" class="mt-2">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Remove photo</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="dashboard-panel mb-4">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">OFFICIAL RECORD</p>
+                        <h2 class="h5 mb-0">Employment details</h2>
+                    </div>
+                </div>
+                <p class="text-secondary small">These details come from your school’s records. Ask your administrator if something needs correcting.</p>
+                <dl class="emp-details">
+                    <div><dt>Full name</dt><dd>@fullName</dd></div>
+                    <div><dt>Employee ID</dt><dd>@emp.EmployeeId</dd></div>
+                    <div><dt>Position</dt><dd>@emp.Position</dd></div>
+                    <div><dt>Department</dt><dd>@(string.IsNullOrWhiteSpace(emp.Department) ? "—" : emp.Department)</dd></div>
+                    <div><dt>School</dt><dd>@(emp.School?.SchoolName ?? "—")</dd></div>
+                    <div><dt>Sign-in email</dt><dd>@(emp.Email ?? "—")</dd></div>
+                    <div><dt>Date hired</dt><dd>@(emp.DateHired?.ToString("MMMM d, yyyy") ?? "—")</dd></div>
+                </dl>
+            </div>
+
+            <div class="dashboard-panel mb-4" id="contact">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">EDITABLE</p>
+                        <h2 class="h5 mb-0">Contact information</h2>
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="Info" novalidate>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Info.ContactNumber" class="form-label"></label>
+                            <input asp-for="Info.ContactNumber" class="form-control" autocomplete="tel" placeholder="e.g. 0917 123 4567" />
+                            <span asp-validation-for="Info.ContactNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Info.Address" class="form-label"></label>
+                            <input asp-for="Info.Address" class="form-control" autocomplete="street-address" />
+                            <span asp-validation-for="Info.Address" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Info.EmergencyContactName" class="form-label"></label>
+                            <input asp-for="Info.EmergencyContactName" class="form-control" />
+                            <span asp-validation-for="Info.EmergencyContactName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Info.EmergencyContactNumber" class="form-label"></label>
+                            <input asp-for="Info.EmergencyContactNumber" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="Info.EmergencyContactNumber" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-primary">Save information</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="dashboard-panel" id="password">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">SECURITY</p>
+                        <h2 class="h5 mb-0">Change password</h2>
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="Password" novalidate>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="Password.CurrentPassword" class="form-label"></label>
+                            <input asp-for="Password.CurrentPassword" class="form-control" autocomplete="current-password" />
+                            <span asp-validation-for="Password.CurrentPassword" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Password.NewPassword" class="form-label"></label>
+                            <input asp-for="Password.NewPassword" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Password.NewPassword" class="text-danger small"></span>
+                            <div class="form-text">6 to 24 characters.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Password.ConfirmPassword" class="form-label"></label>
+                            <input asp-for="Password.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Password.ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-primary">Update password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var input = document.getElementById("photoFile");
+            var submit = document.getElementById("photo-submit");
+            var preview = document.querySelector("#avatar-preview .emp-avatar");
+            var maxBytes = 2 * 1024 * 1024;
+            input.addEventListener("change", function () {
+                var file = input.files[0];
+                if (!file) { submit.disabled = true; return; }
+                if (file.size > maxBytes) {
+                    alert("The photo must be 2 MB or smaller.");
+                    input.value = "";
+                    submit.disabled = true;
+                    return;
+                }
+                submit.disabled = false;
+                var url = URL.createObjectURL(file);
+                preview.innerHTML = "";
+                var img = document.createElement("img");
+                img.alt = "";
+                img.src = url;
+                preview.appendChild(img);
+            });
+        })();
+    </script>
+}

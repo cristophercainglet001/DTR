@@ -1,0 +1,595 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.EmployeesModel
+@{
+    ViewData["Title"] = "Employee Management";
+    var invitationPath = TempData["InvitationPath"] as string;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">People and personnel</p>
+        <h1 class="mb-1">Employee Management</h1>
+        <p class="text-secondary mb-0">Search, add, and update employee records; generate secure staff invitation links.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-page-handler="Template" class="btn btn-outline-secondary">Download CSV template</a>
+        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
+            Import CSV
+        </button>
+        <button type="button" class="btn btn-primary" data-form-mode="add" data-bs-toggle="modal" data-bs-target="#employeeFormModal">
+            Add employee
+        </button>
+    </div>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert @(TempData["StatusTone"] as string == "warning" ? "alert-warning" : "alert-success")" role="status">@statusMessage</div>
+}
+
+@if (Model.ImportSummary is { } import)
+{
+    <div class="card mb-4 @(import.FatalError is null ? "border-success" : "border-danger")" id="import-result">
+        <div class="card-body">
+            <h2 class="h5">CSV import result</h2>
+            @if (import.FatalError is not null)
+            {
+                <div class="alert alert-danger mb-0" role="alert">@import.FatalError</div>
+            }
+            else
+            {
+                <p class="mb-2">
+                    <span class="badge text-bg-success">@import.Imported imported</span>
+                    <span class="badge text-bg-secondary">@import.Skipped.Count already existed</span>
+                    <span class="badge @(import.Errors.Count == 0 ? "text-bg-secondary" : "text-bg-danger")">@import.Errors.Count with errors</span>
+                </p>
+                @if (import.Imported > 0)
+                {
+                    <p class="text-secondary small mb-2">New employees were added as <strong>Active</strong>. Add their email and department by editing each record.</p>
+                }
+                @foreach (var (title, tone, issues) in new[]
+                {
+                    ("Rows with errors (not imported)", "text-danger", import.Errors),
+                    ("Skipped (Badgenumber already exists)", "text-secondary", import.Skipped),
+                    ("Please review (imported)", "text-warning-emphasis", import.Warnings),
+                })
+                {
+                    @if (issues.Count > 0)
+                    {
+                        <h3 class="h6 mt-3 @tone">@title</h3>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-1">
+                                <thead><tr><th style="width:5rem">Row</th><th style="width:10rem">Badgenumber</th><th>Details</th></tr></thead>
+                                <tbody>
+                                    @foreach (var issue in issues.Take(50))
+                                    {
+                                        <tr><td>@issue.RowNumber</td><td>@issue.Value</td><td>@issue.Message</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (issues.Count > 50)
+                        {
+                            <p class="small text-secondary">…and @(issues.Count - 50) more.</p>
+                        }
+                    }
+                }
+            }
+        </div>
+    </div>
+}
+
+@if (invitationPath is not null)
+{
+    <div class="card border-success mb-4">
+        <div class="card-body">
+            <label for="staff-invitation-link" class="form-label fw-semibold">One-time staff invitation link</label>
+            <div class="input-group">
+                <input id="staff-invitation-link"
+                       type="url"
+                       class="form-control"
+                       value="@invitationPath"
+                       data-invitation-path="@invitationPath"
+                       readonly
+                       aria-describedby="staff-invitation-help staff-invitation-copy-status" />
+                <button id="copy-staff-invitation-link" type="button" class="btn btn-outline-success">Copy link</button>
+            </div>
+            <div id="staff-invitation-help" class="form-text">Send this link to the employee using their saved email address. It expires after 48 hours and can only be used once.</div>
+            <div id="staff-invitation-copy-status" class="small mt-2" role="status" aria-live="polite"></div>
+        </div>
+    </div>
+}
+
+<div class="row g-4 align-items-start">
+    <div class="col-xl-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Employee directory</h2>
+                        <p class="text-secondary mb-0">@Model.TotalCount employee@(Model.TotalCount == 1 ? "" : "s")</p>
+                    </div>
+
+                    @if (invitationPath is not null)
+                    {
+                        <script>
+                            (() => {
+                                const linkInput = document.getElementById("staff-invitation-link");
+                                const copyButton = document.getElementById("copy-staff-invitation-link");
+                                const copyStatus = document.getElementById("staff-invitation-copy-status");
+                                if (!linkInput || !copyButton || !copyStatus) return;
+
+                                linkInput.value = new URL(linkInput.dataset.invitationPath, window.location.origin).href;
+
+                                copyButton.addEventListener("click", async () => {
+                                    try {
+                                        if (navigator.clipboard && window.isSecureContext) {
+                                            await navigator.clipboard.writeText(linkInput.value);
+                                        } else {
+                                            linkInput.focus();
+                                            linkInput.select();
+                                            linkInput.setSelectionRange(0, linkInput.value.length);
+                                            if (!document.execCommand("copy")) {
+                                                throw new Error("Clipboard copy was not available.");
+                                            }
+                                        }
+                                        copyStatus.textContent = "Invitation link copied. Send it to the employee.";
+                                        copyStatus.className = "small mt-2 text-success";
+                                    } catch {
+                                        linkInput.focus();
+                                        linkInput.select();
+                                        linkInput.setSelectionRange(0, linkInput.value.length);
+                                        copyStatus.textContent = "Copy was unavailable. Select the link above and copy it manually.";
+                                        copyStatus.className = "small mt-2 text-warning";
+                                    }
+                                });
+                            })();
+                        </script>
+                    }
+                </div>
+
+                <form method="get" class="row g-2 mb-4">
+                    <div class="col-md">
+                        <label for="search" class="visually-hidden">Search employees</label>
+                        <input id="search" name="search" value="@Model.SearchTerm" class="form-control"
+                               placeholder="Search name, ID, position, or school" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="status" class="visually-hidden">Filter by status</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="">All statuses</option>
+                            @foreach (var status in EmployeesModel.StatusOptions)
+                            {
+                                <option value="@status" selected="@(Model.StatusFilter == status)">@status</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-success">Filter</button>
+                    </div>
+                </form>
+
+                @if (Model.Employees.Count == 0)
+                {
+                    <div class="text-center py-5">
+                        <h3 class="h5">No employees found</h3>
+                        <p class="text-secondary mb-3">Try another search or add an employee to the directory.</p>
+                        <button type="button" class="btn btn-primary" data-form-mode="add" data-bs-toggle="modal" data-bs-target="#employeeFormModal">
+                            Add first employee
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Employee</th>
+                                    <th scope="col">Position</th>
+                                    <th scope="col">School</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Staff portal</th>
+                                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var employee in Model.Employees)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@employee.LastName, @employee.FirstName @employee.MiddleName @employee.Suffix</div>
+                                            <div class="small text-secondary">@employee.EmployeeId</div>
+                                        </td>
+                                        <td>
+                                            <div>@employee.Position</div>
+                                            @if (!string.IsNullOrWhiteSpace(employee.Department))
+                                            {
+                                                <div class="small text-secondary">@employee.Department</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div>@employee.School?.SchoolName</div>
+                                            <div class="small text-secondary">@employee.School?.SchoolId</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill @(employee.Status == "Active" ? "text-bg-success" : employee.Status == "Inactive" ? "text-bg-secondary" : "text-bg-warning")">
+                                                @employee.Status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (Model.AccountReady.GetValueOrDefault(employee.Id))
+                                            {
+                                                <div class="d-flex flex-column align-items-start gap-2">
+                                                    <span class="badge text-bg-success">Activated</span>
+                                                    @if (employee.Status == "Active")
+                                                    {
+                                                        <form method="post"
+                                                              asp-page-handler="ResetPassword"
+                                                              onsubmit="return confirm('Reset this employee password to deped123? They must change it at next sign-in.');">
+                                                            <input type="hidden" name="employeeId" value="@employee.Id" />
+                                                            <input type="hidden" name="search" value="@Model.SearchTerm" />
+                                                            <input type="hidden" name="status" value="@Model.StatusFilter" />
+                                                            <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning">Reset to deped123</button>
+                                                        </form>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <form method="post" asp-page-handler="Invite">
+                                                    <input type="hidden" name="employeeId" value="@employee.Id" />
+                                                    <input type="hidden" name="search" value="@Model.SearchTerm" />
+                                                    <input type="hidden" name="status" value="@Model.StatusFilter" />
+                                                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-success"
+                                                            disabled="@(employee.Status != "Active" || string.IsNullOrWhiteSpace(employee.Email))">
+                                                        @(Model.AccountReady.ContainsKey(employee.Id) ? "Resend invite" : "Invite")
+                                                    </button>
+                                                </form>
+                                            }
+                                        </td>
+                                        <td class="text-end text-nowrap">
+                                            <a asp-page="/Admin/Employees"
+                                               asp-route-editId="@employee.Id"
+                                               asp-route-search="@Model.SearchTerm"
+                                               asp-route-status="@Model.StatusFilter"
+                                               asp-route-pageNumber="@Model.PageNumber"
+                                               class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteEmployeeModal"
+                                                    data-employee-id="@employee.Id"
+                                                    data-employee-name="@employee.FirstName @employee.LastName"
+                                                    data-employee-badge="@employee.EmployeeId">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav aria-label="Employee directory pages" class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="small text-secondary">Page @Model.PageNumber of @Model.TotalPages</span>
+                            <div class="btn-group">
+                                @if (Model.PageNumber > 1)
+                                {
+                                    <a asp-page="/Admin/Employees"
+                                       asp-route-search="@Model.SearchTerm"
+                                       asp-route-status="@Model.StatusFilter"
+                                       asp-route-pageNumber="@(Model.PageNumber - 1)"
+                                       class="btn btn-sm btn-outline-secondary">Previous</a>
+                                }
+                                @if (Model.PageNumber < Model.TotalPages)
+                                {
+                                    <a asp-page="/Admin/Employees"
+                                       asp-route-search="@Model.SearchTerm"
+                                       asp-route-status="@Model.StatusFilter"
+                                       asp-route-pageNumber="@(Model.PageNumber + 1)"
+                                       class="btn btn-sm btn-outline-secondary">Next</a>
+                                }
+                            </div>
+                        </nav>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Delete">
+                    <input type="hidden" name="employeeId" id="deleteEmployeeId" />
+                    <input type="hidden" name="search" value="@Model.SearchTerm" />
+                    <input type="hidden" name="status" value="@Model.StatusFilter" />
+                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
+                    <div class="modal-header">
+                        <h2 class="modal-title h4" id="deleteEmployeeModalLabel">Delete employee?</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">You are about to permanently delete <strong id="deleteEmployeeName"></strong> (Badgenumber <span id="deleteEmployeeBadge"></span>).</p>
+                        <div class="alert alert-danger small mb-2" role="alert">
+                            This also deletes their attendance (DTR) records, leave and seminar requests, profile photo and staff portal account. This cannot be undone.
+                        </div>
+                        <p class="small text-secondary mb-0">To keep their history, cancel and set their status to <strong>Inactive</strong> instead.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete employee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Import" enctype="multipart/form-data">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title h4 mb-1" id="importModalLabel">Import employees from CSV</h2>
+                            <p class="text-secondary small mb-0">Fill in the template, save it as CSV, then upload it here.</p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="importSchoolId" class="form-label">Add the employees to school</label>
+                            <select id="importSchoolId" name="importSchoolId" class="form-select" required>
+                                @foreach (var school in Model.Schools)
+                                {
+                                    <option value="@school.Value">@school.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="csvFile" class="form-label">CSV file</label>
+                            <input id="csvFile" name="csvFile" type="file" class="form-control" accept=".csv,text/csv" required />
+                            <div class="form-text">Up to 2,000 rows and 1 MB. <a asp-page-handler="Template">Download the blank template</a>.</div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead><tr><th>Column</th><th>Saved as</th><th>Example</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>Badgenumber</code></td><td>Employee ID (must be unique)</td><td>1001</td></tr>
+                                    <tr><td><code>Name</code></td><td>First name · Middle name · Last name</td><td>Juan Drew L. Delo Santos</td></tr>
+                                    <tr><td><code>TITLE</code></td><td>Position</td><td>Teacher I</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <ul class="small text-secondary mb-0">
+                            <li>Write the middle name as an initial (for example <strong>L.</strong>): everything before it is the first name and everything after it is the last name. <em>Juan Drew L. Delo Santos</em> → Juan Drew / L. / Delo Santos.</li>
+                            <li><em>SANTOS, JUAN DREW L.</em> (last name first) and endings such as Jr. or III are also understood.</li>
+                            <li>Rows with a Badgenumber that already exists are skipped. Rows with problems are listed after the import and are not saved.</li>
+                            <li>Imported employees are set to Active. Add their email and department later by editing each record.</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Import employees</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="employeeFormModal" tabindex="-1" aria-labelledby="employeeFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title h4 mb-1" id="employeeFormModalLabel">@(Model.IsEditing ? "Edit employee" : "Add employee")</h2>
+                        <p class="text-secondary small mb-0">Fields marked required must be completed.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form method="post" asp-page-handler="Save">
+                    <div class="modal-body">
+                    <input asp-for="Input.Id" type="hidden" />
+                    <input name="search" value="@Model.SearchTerm" type="hidden" />
+                    <input name="status" value="@Model.StatusFilter" type="hidden" />
+                    <input name="pageNumber" value="@Model.PageNumber" type="hidden" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.SchoolId" class="form-label">School <span class="text-danger">*</span></label>
+                        <select asp-for="Input.SchoolId" asp-items="Model.Schools" class="form-select">
+                            <option value="">Select a school</option>
+                        </select>
+                        <span asp-validation-for="Input.SchoolId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.EmployeeId" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                        <input asp-for="Input.EmployeeId" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Input.EmployeeId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.FirstName" class="form-label">First name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.FirstName" class="form-control" autocomplete="given-name" />
+                            <span asp-validation-for="Input.FirstName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.LastName" class="form-label">Last name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.LastName" class="form-control" autocomplete="family-name" />
+                            <span asp-validation-for="Input.LastName" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.MiddleName" class="form-label">Middle name</label>
+                            <input asp-for="Input.MiddleName" class="form-control" />
+                            <span asp-validation-for="Input.MiddleName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.Suffix" class="form-label">Suffix</label>
+                            <input asp-for="Input.Suffix" class="form-control" placeholder="Jr., III" />
+                            <span asp-validation-for="Input.Suffix" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Position" class="form-label">Position <span class="text-danger">*</span></label>
+                        <select asp-for="Input.Position" class="form-select" id="Input_Position">
+                            <option value="">Select a position</option>
+                            <optgroup label="Teaching positions">
+                                @foreach (var position in EmployeesModel.TeachingPositionOptions)
+                                {
+                                    <option value="@position">@position</option>
+                                }
+                            </optgroup>
+                            <optgroup label="Non-teaching positions">
+                                @foreach (var position in EmployeesModel.NonTeachingPositionOptions)
+                                {
+                                    <option value="@position">@position</option>
+                                }
+                            </optgroup>
+                            <option value="@EmployeesModel.OtherOptionValue">Other (enter below)</option>
+                        </select>
+                        <span asp-validation-for="Input.Position" class="text-danger small"></span>
+                        <div id="position-other-field" class="mt-2 d-none">
+                            <label asp-for="Input.PositionOther" class="form-label">Enter position</label>
+                            <input asp-for="Input.PositionOther" class="form-control" maxlength="150" />
+                            <span asp-validation-for="Input.PositionOther" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Department" class="form-label">Department</label>
+                        <select asp-for="Input.Department" class="form-select" id="Input_Department">
+                            <option value="">Select a department (optional)</option>
+                            @foreach (var department in EmployeesModel.DepartmentOptions)
+                            {
+                                <option value="@department">@department</option>
+                            }
+                            <option value="@EmployeesModel.OtherOptionValue">Other (enter below)</option>
+                        </select>
+                        <span asp-validation-for="Input.Department" class="text-danger small"></span>
+                        <div id="department-other-field" class="mt-2 d-none">
+                            <label asp-for="Input.DepartmentOther" class="form-label">Enter department</label>
+                            <input asp-for="Input.DepartmentOther" class="form-control" maxlength="150" />
+                            <span asp-validation-for="Input.DepartmentOther" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label">Email</label>
+                        <input asp-for="Input.Email" class="form-control" type="email" autocomplete="email" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.Status" class="form-label">Status</label>
+                            <select asp-for="Input.Status" class="form-select">
+                                @foreach (var status in EmployeesModel.StatusOptions)
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Input.Status" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.DateHired" class="form-label">Date hired</label>
+                            <input asp-for="Input.DateHired" class="form-control" type="date" />
+                            <span asp-validation-for="Input.DateHired" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary employee-form-submit">@(Model.IsEditing ? "Save changes" : "Add employee")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("deleteEmployeeModal")?.addEventListener("show.bs.modal", event => {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            document.getElementById("deleteEmployeeId").value = trigger.dataset.employeeId;
+            document.getElementById("deleteEmployeeName").textContent = trigger.dataset.employeeName;
+            document.getElementById("deleteEmployeeBadge").textContent = trigger.dataset.employeeBadge;
+        });
+    </script>
+    <script>
+        (() => {
+            const modalElement = document.getElementById("employeeFormModal");
+            const form = modalElement?.querySelector("form");
+            if (!modalElement || !form) return;
+
+            const positionSelect = document.getElementById("Input_Position");
+            const departmentSelect = document.getElementById("Input_Department");
+            const positionOtherField = document.getElementById("position-other-field");
+            const departmentOtherField = document.getElementById("department-other-field");
+
+            function updateOtherFields() {
+                positionOtherField.classList.toggle("d-none", positionSelect.value !== "@EmployeesModel.OtherOptionValue");
+                departmentOtherField.classList.toggle("d-none", departmentSelect.value !== "@EmployeesModel.OtherOptionValue");
+            }
+
+            function resetForAdd() {
+                form.reset();
+                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(field => field.value = "");
+                form.querySelectorAll("select").forEach(field => field.value = "");
+                document.getElementById("Input_Id").value = "0";
+                document.getElementById("Input_Status").value = "Active";
+                form.querySelectorAll(".input-validation-error, .is-invalid, .is-valid")
+                    .forEach(field => field.classList.remove("input-validation-error", "is-invalid", "is-valid"));
+                form.querySelectorAll("[data-valmsg-for]").forEach(message => {
+                    message.textContent = "";
+                    message.classList.remove("field-validation-error");
+                    message.classList.add("field-validation-valid");
+                });
+                const summary = form.querySelector("[data-valmsg-summary=true]");
+                if (summary) {
+                    summary.textContent = "";
+                    summary.classList.remove("validation-summary-errors");
+                    summary.classList.add("validation-summary-valid");
+                }
+                document.getElementById("employeeFormModalLabel").textContent = "Add employee";
+                form.querySelector(".employee-form-submit").textContent = "Add employee";
+                updateOtherFields();
+
+                if (window.jQuery?.validator?.unobtrusive) {
+                    window.jQuery(form).removeData("validator").removeData("unobtrusiveValidation");
+                    window.jQuery.validator.unobtrusive.parse(form);
+                }
+            }
+
+            positionSelect.addEventListener("change", updateOtherFields);
+            departmentSelect.addEventListener("change", updateOtherFields);
+            modalElement.addEventListener("show.bs.modal", event => {
+                if (event.relatedTarget?.dataset.formMode === "add") resetForAdd();
+            });
+            modalElement.addEventListener("hidden.bs.modal", resetForAdd);
+            updateOtherFields();
+        })();
+    </script>
+    @if (Model.ShowFormModal)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("employeeFormModal")).show();
+            });
+        </script>
+    }
+}

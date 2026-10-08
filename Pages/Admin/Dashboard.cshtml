@@ -1,0 +1,158 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    var todayUrl = Model.Today.ToString("yyyy-MM-dd");
+}
+
+<section class="school-dashboard">
+    <header class="dashboard-heading">
+        <div>
+            <p class="dashboard-eyebrow">SCHOOL ADMINISTRATION · @Model.Today.ToString("dddd, MMMM d")</p>
+            <h1>Good day, @User.Identity?.Name!</h1>
+            <p class="dashboard-intro">Your school office at a glance. Let’s make today a great school day.</p>
+        </div>
+        <div class="school-year-badge">
+            <span class="school-year-icon" aria-hidden="true">✦</span>
+            <span>
+                <small>Current school year</small>
+                <strong>@Model.CurrentSchoolYear</strong>
+            </span>
+        </div>
+    </header>
+
+    <section class="welcome-board mb-4" aria-labelledby="welcome-title">
+        <div class="welcome-board-copy">
+            <span class="welcome-tag">YOUR SCHOOL, READY FOR THE DAY</span>
+            <h2 id="welcome-title">A great school day starts with a well-prepared team.</h2>
+            <p>Keep employee records up to date and attendance in check, all from one place.</p>
+            <div class="welcome-actions">
+                <a asp-page="/Admin/Dtr" asp-route-dateFilter="@todayUrl" class="btn btn-light">Take today’s attendance <span aria-hidden="true">→</span></a>
+                <a asp-page="/Admin/Employees" class="welcome-text-link">View school team</a>
+            </div>
+        </div>
+        <div class="welcome-illustration" aria-hidden="true">
+            <div class="sun-shape"></div>
+            <div class="school-building">
+                <div class="school-roof"></div>
+                <div class="school-front">
+                    <div class="school-sign">OUR SCHOOL</div>
+                    <div class="school-windows"><i></i><i></i><i></i></div>
+                    <div class="school-door"></div>
+                </div>
+                <div class="school-ground"></div>
+            </div>
+            <span class="floating-star star-one">✦</span>
+            <span class="floating-star star-two">✦</span>
+        </div>
+    </section>
+
+    <div class="dashboard-section-heading">
+        <div>
+            <p class="dashboard-eyebrow mb-1">THE SCHOOL SNAPSHOT</p>
+            <h2 class="h4 mb-0">Everything in one place</h2>
+        </div>
+        <span class="snapshot-date">@Model.Today.ToString("MMMM d, yyyy")</span>
+    </div>
+
+    <section class="row g-3 mb-4" aria-label="School statistics">
+        <div class="col-sm-6 col-xl-3">
+            <a asp-page="/Admin/Employees" class="snapshot-card snapshot-card-green">
+                <span class="snapshot-icon" aria-hidden="true">♧</span>
+                <span class="snapshot-label">School team</span>
+                <strong class="snapshot-number">@Model.EmployeeCount</strong>
+                <span class="snapshot-detail">@Model.ActiveEmployeeCount active employees</span>
+                <span class="snapshot-link">Manage employees <span aria-hidden="true">→</span></span>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <a asp-page="/Admin/Dtr" asp-route-dateFilter="@todayUrl" class="snapshot-card snapshot-card-yellow">
+                <span class="snapshot-icon" aria-hidden="true">◷</span>
+                <span class="snapshot-label">Attendance today</span>
+                <strong class="snapshot-number">@Model.TodayDtrRecordCount</strong>
+                <span class="snapshot-detail">@Model.EmployeesWithoutTodayRecord employees without a record</span>
+                <span class="snapshot-link">Review attendance <span aria-hidden="true">→</span></span>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <a asp-page="/Admin/Dtr" class="snapshot-card snapshot-card-blue">
+                <span class="snapshot-icon" aria-hidden="true">▤</span>
+                <span class="snapshot-label">DTR records</span>
+                <strong class="snapshot-number">@Model.DtrRecordCount</strong>
+                <span class="snapshot-detail">Attendance entries on file</span>
+                <span class="snapshot-link">Open attendance <span aria-hidden="true">→</span></span>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="snapshot-card snapshot-card-coral">
+                <span class="snapshot-icon" aria-hidden="true">✎</span>
+                <span class="snapshot-label">Leave applications</span>
+                <strong class="snapshot-number">@Model.LeaveApplicationCount</strong>
+                <span class="snapshot-detail">@Model.PendingLeaveCount pending review</span>
+                <span class="snapshot-link snapshot-link-static">School records</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="row g-4">
+        <div class="col-lg-7">
+            <div class="dashboard-panel h-100">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">A FEW USEFUL SHORTCUTS</p>
+                        <h2 class="h5 mb-0">Your school day</h2>
+                    </div>
+                    <span class="panel-heading-icon" aria-hidden="true">✦</span>
+                </div>
+                <div class="shortcut-list">
+                    <a asp-page="/Admin/Employees" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-green" aria-hidden="true">＋</span>
+                        <span><strong>Add or update an employee</strong><small>Keep your staff directory current</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a asp-page="/Admin/Dtr" asp-route-dateFilter="@todayUrl" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-yellow" aria-hidden="true">◷</span>
+                        <span><strong>Record today’s attendance</strong><small>Open the daily time record page</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a asp-page="/Admin/Reports" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-blue" aria-hidden="true">▤</span>
+                        <span><strong>Prepare a Form 48 report</strong><small>Choose an employee and print a monthly DTR</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a asp-page="/Admin/Leaves" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-yellow" aria-hidden="true">✎</span>
+                        <span><strong>Review leave requests</strong><small>@Model.PendingLeaveCount pending administrator review</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <div class="shortcut-item shortcut-item-static">
+                        <span class="shortcut-icon shortcut-icon-blue" aria-hidden="true">▣</span>
+                        <span><strong>School years on file</strong><small>Current school year: @Model.CurrentSchoolYear</small></span>
+                        <span class="shortcut-count">@Model.SchoolYearCount</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="dashboard-panel school-facts-panel h-100">
+                <p class="dashboard-eyebrow mb-1">SCHOOL OFFICE CHECK-IN</p>
+                <h2 class="h5 mb-3">Ready for the bell?</h2>
+                <div class="school-fact">
+                    <span class="fact-check" aria-hidden="true">✓</span>
+                    <span><strong>@Model.SchoolCount</strong> schools in your directory</span>
+                </div>
+                <div class="school-fact">
+                    <span class="fact-check" aria-hidden="true">✓</span>
+                    <span><strong>@Model.HolidayCount</strong> holidays recorded</span>
+                </div>
+                <div class="school-fact">
+                    <span class="fact-check" aria-hidden="true">✓</span>
+                    <span><strong>@Model.AuditLogCount</strong> recent admin activity records</span>
+                </div>
+                <a asp-page="/Admin/Dtr" asp-route-dateFilter="@todayUrl" class="school-fact-cta">
+                    Start with today’s attendance <span aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+</section>

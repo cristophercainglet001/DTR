@@ -1,0 +1,45 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.LoginModel
+@{
+    ViewData["Title"] = "Staff sign in";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <p class="text-uppercase text-success fw-semibold small mb-1">Teacher & employee portal</p>
+                <h1 class="h3 mb-3">Staff sign in</h1>
+                <p class="text-secondary">Use the school email address where your invitation was sent.</p>
+                @if (TempData["StatusMessage"] is string message)
+                {
+                    <div class="alert alert-success">@message</div>
+                }
+                <form method="post">
+                    <input asp-for="ReturnUrl" type="hidden" />
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <input asp-for="Email" type="email" class="form-control" autocomplete="username" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">Password</label>
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger">@Model.ErrorMessage</div>
+                    }
+                    <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                </form>
+                <p class="small text-secondary mt-3 mb-0">Need an account? Ask your administrator to send an invitation.</p>
+                <a asp-page="/Admin/Login" class="btn btn-outline-secondary w-100 mt-3">Admin Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - DepEdDTRSystem</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/DepEdDTRSystem.styles.css" asp-append-version="true" />
+</head>
+<body class="school-body">
+    @{
+        var currentPage = ViewContext.RouteData.Values["page"] as string;
+        var employeeHome = User.IsInRole("Employee");
+        var dtrGroupActive = currentPage is "/Admin/Dtr" or "/Admin/Reports" or "/Admin/Leaves" or "/Admin/Seminars" or "/Admin/AttendanceImport";
+    }
+    <header class="school-header">
+        <nav class="navbar navbar-expand-sm navbar-dark school-nav">
+            <div class="container">
+                @if (employeeHome)
+                {
+                    <a class="navbar-brand school-brand" asp-area="" asp-page="/Employee/Dashboard">
+                        <span class="brand-mark">D</span>
+                        <span>DepEd DTR</span>
+                    </a>
+                }
+                else
+                {
+                    <a class="navbar-brand school-brand" asp-area="" asp-page="/Index">
+                        <span class="brand-mark">D</span>
+                        <span>DepEd DTR</span>
+                    </a>
+                }
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1 school-menu">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Admin/Dashboard">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Admin/Employees">Employees</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Admin/Schools">Schools</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @(dtrGroupActive ? "active" : "")" href="#" id="dtrMenu" role="button"
+                                   data-bs-toggle="dropdown" aria-expanded="false">Daily Time Record</a>
+                                <ul class="dropdown-menu school-dropdown" aria-labelledby="dtrMenu">
+                                    <li><a class="dropdown-item @(currentPage == "/Admin/Dtr" ? "active" : "")" asp-page="/Admin/Dtr">Attendance</a></li>
+                                    <li><a class="dropdown-item @(currentPage == "/Admin/Reports" ? "active" : "")" asp-page="/Admin/Reports">DTR reports</a></li>
+                                    <li><a class="dropdown-item @(currentPage == "/Admin/Leaves" ? "active" : "")" asp-page="/Admin/Leaves">Leave requests</a></li>
+                                    <li><a class="dropdown-item @(currentPage == "/Admin/Seminars" ? "active" : "")" asp-page="/Admin/Seminars">Seminar requests</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Admin/Logout">
+                                    <button type="submit" class="nav-link btn btn-link">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else if (User.IsInRole("Employee"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(currentPage == "/Employee/Dashboard" ? "active" : "")" asp-page="/Employee/Dashboard">Employee dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(currentPage == "/Employee/Portal" ? "active" : "")" asp-page="/Employee/Portal">My DTR</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(currentPage == "/Employee/Leave" ? "active" : "")" asp-page="/Employee/Leave">My leave requests</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(currentPage == "/Employee/Seminars" ? "active" : "")" asp-page="/Employee/Seminars">My seminars</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(currentPage == "/Employee/Profile" ? "active" : "")" asp-page="/Employee/Profile">Information</a>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Employee/Logout">
+                                    <button type="submit" class="nav-link btn btn-link">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else if (User.IsInRole("EmployeePasswordChangeRequired"))
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link">Change temporary password to continue</span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Employee/Logout">
+                                    <button type="submit" class="nav-link btn btn-link">Logout</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container school-shell">
+        <main role="main" class="pb-4">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="school-footer">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span>&copy; 2026 DepEdDTRSystem</span>
+                <span>
+                    Developed by
+                    <a href="https://www.facebook.com/cristopherscainglet"
+                       target="_blank"
+                       rel="noopener noreferrer">CRISTOPHER S. CAINGLET</a>
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

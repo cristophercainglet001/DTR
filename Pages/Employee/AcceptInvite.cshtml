@@ -1,0 +1,43 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.AcceptInviteModel
+@{
+    ViewData["Title"] = "Activate staff account";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <p class="text-uppercase text-success fw-semibold small mb-1">Staff portal invitation</p>
+                <h1 class="h3 mb-3">Activate your account</h1>
+                @if (!Model.InvitationValid)
+                {
+                    <p class="text-secondary">This invitation is invalid, already used, or expired. Ask your administrator for a new invitation.</p>
+                }
+                else
+                {
+                    <p class="text-secondary">Welcome, @Model.EmployeeName. Create a password of 6 to 24 characters.</p>
+                    <form method="post">
+                        <input asp-for="Token" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label">Confirm password</label>
+                            <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Activate account</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

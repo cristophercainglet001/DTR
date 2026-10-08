@@ -1,0 +1,11 @@
+@model DepEdDTRSystem.ViewModels.EmployeeAvatarViewModel
+<span class="emp-avatar emp-avatar-@Model.Size" aria-hidden="true">
+    @if (Model.PhotoUrl is not null)
+    {
+        <img src="@Model.PhotoUrl" alt="" />
+    }
+    else
+    {
+        <span>@Model.Initials</span>
+    }
+</span>

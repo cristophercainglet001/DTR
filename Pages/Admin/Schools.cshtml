@@ -1,0 +1,102 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.SchoolsModel
+@{
+    ViewData["Title"] = "School Management";
+}
+
+<div class="mb-4">
+    <p class="text-uppercase text-success fw-semibold small mb-1">School administration</p>
+    <h1 class="mb-1">School Management</h1>
+    <p class="text-secondary mb-0">Edit each school’s name and set the school head details shown on Form 48.</p>
+</div>
+
+@if (Model.StatusMessage is not null)
+{
+    <div class="alert alert-success" role="status">@Model.StatusMessage</div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+}
+
+<div class="card">
+    <div class="card-body p-4">
+        @if (Model.Schools.Count == 0)
+        {
+            <p class="text-secondary mb-0">No schools are available to manage.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">School ID</th>
+                            <th scope="col">School name</th>
+                            <th scope="col">School head</th>
+                            <th scope="col">Position</th>
+                            <th scope="col"><span class="visually-hidden">Save</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var school in Model.Schools)
+                        {
+                            var editingThisSchool = Model.Input.SchoolId == school.Id;
+                            <tr>
+                                <td class="small text-secondary">@school.SchoolId</td>
+                                <td colspan="4">
+                                    <form method="post" asp-page-handler="Save" class="row g-2 align-items-end">
+                                        <input type="hidden" name="Input.SchoolId" value="@school.Id" />
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="school-name-@school.Id">School name</label>
+                                            <input id="school-name-@school.Id"
+                                                   name="Input.SchoolName"
+                                                   value="@(editingThisSchool ? Model.Input.SchoolName : school.SchoolName)"
+                                                   maxlength="200"
+                                                   required
+                                                   class="form-control" />
+                                            @if (editingThisSchool)
+                                            {
+                                                <span asp-validation-for="Input.SchoolName" class="text-danger small"></span>
+                                            }
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <label class="form-label" for="school-head-@school.Id">School head name</label>
+                                            <input id="school-head-@school.Id"
+                                                   name="Input.SchoolHeadName"
+                                                   value="@(editingThisSchool ? Model.Input.SchoolHeadName : school.SchoolHeadName)"
+                                                   maxlength="150"
+                                                   required
+                                                   class="form-control" />
+                                            @if (editingThisSchool)
+                                            {
+                                                <span asp-validation-for="Input.SchoolHeadName" class="text-danger small"></span>
+                                            }
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <label class="form-label" for="school-position-@school.Id">Position</label>
+                                            <input id="school-position-@school.Id"
+                                                   name="Input.SchoolHeadPosition"
+                                                   value="@(editingThisSchool ? Model.Input.SchoolHeadPosition : school.SchoolHeadPosition)"
+                                                   maxlength="150"
+                                                   required
+                                                   class="form-control" />
+                                            @if (editingThisSchool)
+                                            {
+                                                <span asp-validation-for="Input.SchoolHeadPosition" class="text-danger small"></span>
+                                            }
+                                        </div>
+                                        <div class="col-lg-2">
+                                            <button type="submit" class="btn btn-outline-success w-100">Save changes</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

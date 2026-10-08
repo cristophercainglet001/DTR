@@ -1,0 +1,137 @@
+@model DepEdDTRSystem.ViewModels.DtrReportEditorViewModel
+@{
+    var modalId = $"editAttendanceModal-{Model.EmployeeId}";
+    var monthLabel = new DateTime(Model.Year, Model.Month, 1).ToString("MMMM yyyy");
+    var editedDays = Model.Days.Count(x => x.EditCount > 0);
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 no-print">
+    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#@modalId">
+        Edit attendance
+    </button>
+    @if (editedDays > 0)
+    {
+        <span class="badge text-bg-warning" title="Admin-only. Never shown on Form 48.">@editedDays day(s) edited</span>
+    }
+    <span class="small text-secondary">@Model.EmployeeName · @monthLabel</span>
+</div>
+
+<div class="modal fade no-print" id="@modalId" data-editor-modal="@Model.EmployeeId" tabindex="-1" aria-labelledby="@(modalId)Label" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h4 mb-1" id="@(modalId)Label">Edit attendance</h2>
+                    <p class="text-secondary small mb-0">@Model.EmployeeName · @monthLabel</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary">
+                    Saving a change updates the official attendance record and automatically marks the day <span class="badge text-bg-warning">Edited</span>.
+                    The mark, notes and edit history are admin-only and never appear on Form 48.
+                </p>
+
+                @if (Model.History.Count > 0)
+                {
+                    <details class="alert alert-light border py-2">
+                        <summary class="small fw-semibold">Admin edit history (@Model.History.Count)</summary>
+                        <ul class="small mb-0 mt-2">
+                            @foreach (var edit in Model.History)
+                            {
+                                <li>
+                                    @edit.EditedAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt") — @edit.EditedBy edited
+                                    @(edit.AttendanceDate is { } editedDate ? editedDate.ToString("MMM d") : "an entry"): @edit.Note
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
+
+                <div class="att-autofill border rounded-3 p-3 mb-3">
+                    <div class="d-flex flex-wrap align-items-end gap-3">
+                        <div>
+                            <div class="fw-semibold">Auto-fill time</div>
+                            <div class="small text-secondary">Standard schedule</div>
+                        </div>
+                        <div><label class="form-label small mb-1">AM in</label><input type="time" class="form-control form-control-sm" data-sched="amTimeIn" value="07:30" /></div>
+                        <div><label class="form-label small mb-1">AM out</label><input type="time" class="form-control form-control-sm" data-sched="amTimeOut" value="12:00" /></div>
+                        <div><label class="form-label small mb-1">PM in</label><input type="time" class="form-control form-control-sm" data-sched="pmTimeIn" value="13:00" /></div>
+                        <div><label class="form-label small mb-1">PM out</label><input type="time" class="form-control form-control-sm" data-sched="pmTimeOut" value="16:30" /></div>
+                        <button type="button" class="btn btn-success" data-autofill-all>Auto-fill empty weekdays</button>
+                    </div>
+                    <p class="small text-secondary mb-0 mt-2">
+                        Fills only empty weekdays. Weekends, holidays, approved leave and seminar days, and days that already have times are skipped.
+                        Use <strong>Fill</strong> on a row to fill just that day. Nothing is saved until you click <strong>Save all changes</strong>.
+                    </p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">AM in</th>
+                                <th scope="col">AM out</th>
+                                <th scope="col">PM in</th>
+                                <th scope="col">PM out</th>
+                                <th scope="col">Admin-only note (optional)</th>
+                                <th scope="col">Remark</th>
+                                <th scope="col">Save</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in Model.Days)
+                            {
+                                var formId = $"dtr-edit-{Model.EmployeeId}-{day.Date.Day}";
+                                <tr data-date="@day.Date.ToString("yyyy-MM-dd")" data-skip="@((day.IsWeekend || day.SpecialLabel is not null) ? "1" : "0")" class="@(day.EditCount > 0 ? "table-warning" : "")">
+                                    <td class="text-nowrap">
+                                        @day.Date.ToString("ddd, MMM d")
+                                        @if (day.SpecialLabel is not null)
+                                        {
+                                            <div class="small text-secondary">@day.SpecialLabel</div>
+                                        }
+                                    </td>
+                                    <td><input form="@formId" name="amTimeIn" type="time" value="@day.AmTimeIn" class="form-control form-control-sm" /></td>
+                                    <td><input form="@formId" name="amTimeOut" type="time" value="@day.AmTimeOut" class="form-control form-control-sm" /></td>
+                                    <td><input form="@formId" name="pmTimeIn" type="time" value="@day.PmTimeIn" class="form-control form-control-sm" /></td>
+                                    <td><input form="@formId" name="pmTimeOut" type="time" value="@day.PmTimeOut" class="form-control form-control-sm" /></td>
+                                    <td><input form="@formId" name="note" maxlength="500" class="form-control form-control-sm" placeholder="Reason for correction" /></td>
+                                    <td class="text-nowrap">
+                                        @if (day.EditCount > 0)
+                                        {
+                                            <span class="badge text-bg-warning">Edited@(day.EditCount > 1 ? $" ×{day.EditCount}" : "")</span>
+                                            <div class="small text-secondary">@day.LastEditedAt?.ToLocalTime().ToString("MMM d, h:mm tt") · @day.LastEditedBy</div>
+                                        }
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-fill-row title="Fill this day's empty times with the standard schedule">Fill</button>
+                                        <form id="@formId" method="post" asp-page-handler="SaveAttendance" class="d-inline">
+                                            <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                                            <input type="hidden" name="date" value="@day.Date.ToString("yyyy-MM-dd")" />
+                                            <input type="hidden" name="month" value="@Model.Month" />
+                                            <input type="hidden" name="year" value="@Model.Year" />
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Save</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form method="post" asp-page-handler="SaveMany" class="d-flex flex-wrap align-items-center gap-2 me-auto att-bulk-form">
+                    <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                    <input type="hidden" name="month" value="@Model.Month" />
+                    <input type="hidden" name="year" value="@Model.Year" />
+                    <input type="hidden" name="entriesJson" data-entries />
+                    <input name="note" maxlength="500" class="form-control form-control-sm" style="width:18rem" placeholder="Admin-only note for all changed days (optional)" />
+                    <button type="submit" class="btn btn-primary" data-save-all disabled>Save all changes</button>
+                    <span class="small text-secondary" data-dirty-count></span>
+                </form>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

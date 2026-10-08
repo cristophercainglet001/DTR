@@ -1,0 +1,73 @@
+@page
+@model DepEdDTRSystem.Pages.DatabaseTestModel
+
+@{
+    ViewData["Title"] = "Database Test";
+}
+
+<div class="container mt-4">
+    <h1>Database Connection Test</h1>
+
+    @if (Model.IsConnected)
+    {
+        <div class="alert alert-success">
+            <strong>Database connection successful!</strong>
+            PostgreSQL is connected to the DepEd DTR System.
+        </div>
+
+        <h3>Current table record counts</h3>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Records</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>Schools</td>
+                    <td>@Model.SchoolCount</td>
+                </tr>
+
+                <tr>
+                    <td>School Years</td>
+                    <td>@Model.SchoolYearCount</td>
+                </tr>
+
+                <tr>
+                    <td>Employees</td>
+                    <td>@Model.EmployeeCount</td>
+                </tr>
+
+                <tr>
+                    <td>DTR Records</td>
+                    <td>@Model.DtrRecordCount</td>
+                </tr>
+
+                <tr>
+                    <td>Holidays</td>
+                    <td>@Model.HolidayCount</td>
+                </tr>
+
+                <tr>
+                    <td>Leave Applications</td>
+                    <td>@Model.LeaveApplicationCount</td>
+                </tr>
+
+                <tr>
+                    <td>Audit Logs</td>
+                    <td>@Model.AuditLogCount</td>
+                </tr>
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <strong>Database connection failed.</strong>
+            <p>@Model.ErrorMessage</p>
+        </div>
+    }
+</div>

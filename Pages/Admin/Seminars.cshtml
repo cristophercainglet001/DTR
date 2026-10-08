@@ -1,0 +1,96 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.SeminarsModel
+@{
+    ViewData["Title"] = "Seminar Requests";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">Administration</p>
+        <h1 class="mb-1">Seminar requests</h1>
+        <p class="text-secondary mb-0">Validate employee-submitted seminars. Approved dates appear on the employee’s DTR.</p>
+    </div>
+    <span class="badge rounded-pill text-bg-warning p-2">@Model.PendingCount pending validation</span>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert @(TempData["StatusTone"] as string == "warning" ? "alert-warning" : "alert-info")" role="status">@statusMessage</div>
+}
+
+<div class="card">
+    <div class="card-body p-4">
+        <form method="get" class="row g-2 align-items-end mb-4">
+            <div class="col-sm-4 col-md-3">
+                <label for="status" class="form-label">Show requests</label>
+                <select id="status" name="status" class="form-select">
+                    @foreach (var status in new[] { "Pending", "Approved", "Rejected", "All" })
+                    {
+                        <option value="@status" selected="@(Model.StatusFilter == status)">@status</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto"><button class="btn btn-outline-success" type="submit">Filter</button></div>
+        </form>
+
+        @if (Model.Applications.Count == 0)
+        {
+            <div class="text-center py-5">
+                <h2 class="h5">No @Model.StatusFilter.ToLowerInvariant() seminar requests</h2>
+                <p class="text-secondary mb-0">Employee-submitted seminars will appear here for validation.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr><th>Employee</th><th>Seminar</th><th>Dates</th><th>Venue</th><th>Purpose</th><th>Status / review</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var application in Model.Applications)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@application.Employee?.LastName, @application.Employee?.FirstName</strong>
+                                    <div class="small text-secondary">@application.Employee?.EmployeeId · @application.Employee?.School?.SchoolName</div>
+                                </td>
+                                <td>
+                                    <strong>@application.SeminarTitle</strong>
+                                    <div class="small text-secondary">@application.Organizer</div>
+                                </td>
+                                <td class="text-nowrap">@application.StartDate.ToString("MMM d, yyyy") – @application.EndDate.ToString("MMM d, yyyy")</td>
+                                <td>@application.Venue</td>
+                                <td>@application.Purpose</td>
+                                <td>
+                                    <span class="badge @(application.Status == "Approved" ? "text-bg-success" : application.Status == "Rejected" ? "text-bg-danger" : "text-bg-warning")">@application.Status</span>
+                                    @if (application.Status == "Pending")
+                                    {
+                                        <form method="post" asp-page-handler="Review" class="mt-2">
+                                            <input type="hidden" name="id" value="@application.Id" />
+                                            <input type="hidden" name="status" value="@Model.StatusFilter" />
+                                            <label class="visually-hidden" for="remarks-@application.Id">Optional remarks for @application.Employee?.FirstName</label>
+                                            <input id="remarks-@application.Id" name="remarks" class="form-control form-control-sm mb-2" maxlength="1000" placeholder="Optional remarks" />
+                                            <div class="d-flex gap-1">
+                                                <button type="submit" name="decision" value="Approved" class="btn btn-sm btn-success">Approve</button>
+                                                <button type="submit" name="decision" value="Rejected" class="btn btn-sm btn-outline-danger">Reject</button>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <div class="small mt-1">@application.ReviewedAt?.ToLocalTime().ToString("MMM d, yyyy")</div>
+                                        @if (!string.IsNullOrWhiteSpace(application.Remarks))
+                                        {
+                                            <div class="small text-secondary">@application.Remarks</div>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,186 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.LeaveModel
+@{
+    ViewData["Title"] = "My Leave Requests";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">Teacher & employee portal</p>
+        <h1 class="mb-1">My leave requests</h1>
+        <p class="text-secondary mb-0">Submit a request and follow its approval status.</p>
+    </div>
+    <a asp-page="/Employee/Portal" class="btn btn-outline-secondary">Back to my DTR</a>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success">@statusMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Leave application form</h2>
+                <form method="post" id="leave-application-form"
+                      data-holiday-dates="@string.Join(",", Model.SchoolHolidayDates.Select(date => date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)))">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="Input.LeaveType" class="form-label">Type of leave</label>
+                        <select asp-for="Input.LeaveType" class="form-select">
+                            <option value="">Select leave type</option>
+                            @foreach (var leaveType in LeaveModel.LeaveTypes)
+                            {
+                                <option value="@leaveType">@leaveType</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Input.LeaveType" class="text-danger small"></span>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6 mb-3">
+                            <label asp-for="Input.StartDate" class="form-label">Start date</label>
+                            <input asp-for="Input.StartDate" class="form-control" type="date" />
+                            <span asp-validation-for="Input.StartDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label asp-for="Input.EndDate" class="form-label">End date</label>
+                            <input asp-for="Input.EndDate" class="form-control" type="date" />
+                            <span asp-validation-for="Input.EndDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.NumberOfDays" class="form-label">Number of leave days</label>
+                        <input asp-for="Input.NumberOfDays" class="form-control" type="number" min="0.5" max="365" step="0.5" />
+                        <div class="form-text">Automatically counts weekdays, excluding weekends and active school holidays. Changing the number of days adjusts the end date.</div>
+                        <span asp-validation-for="Input.NumberOfDays" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Reason" class="form-label">Reason</label>
+                        <textarea asp-for="Input.Reason" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Input.Reason" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit for approval</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Request history</h2>
+                @if (Model.Applications.Count == 0)
+                {
+                    <p class="text-secondary mb-0">You have not submitted any leave requests.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Leave</th><th>Dates</th><th>Days</th><th>Status</th><th>Admin remarks</th></tr></thead>
+                            <tbody>
+                                @foreach (var request in Model.Applications)
+                                {
+                                    <tr>
+                                        <td>@request.LeaveType</td>
+                                        <td class="text-nowrap">@request.StartDate.ToString("MMM d, yyyy") – @request.EndDate.ToString("MMM d, yyyy")</td>
+                                        <td>@request.NumberOfDays</td>
+                                        <td><span class="badge @(request.Status == "Approved" ? "text-bg-success" : request.Status == "Rejected" ? "text-bg-danger" : "text-bg-warning")">@request.Status</span></td>
+                                        <td>@(string.IsNullOrWhiteSpace(request.Remarks) ? "—" : request.Remarks)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const form = document.getElementById("leave-application-form");
+            const startInput = document.getElementById("Input_StartDate");
+            const endInput = document.getElementById("Input_EndDate");
+            const numberOfDaysInput = document.getElementById("Input_NumberOfDays");
+            if (!form || !startInput || !endInput || !numberOfDaysInput) return;
+
+            const holidayDates = new Set(
+                form.dataset.holidayDates.split(",").filter(Boolean));
+            const millisecondsPerDay = 24 * 60 * 60 * 1000;
+
+            function dateToUtc(dateString) {
+                const [year, month, day] = dateString.split("-").map(Number);
+                return Date.UTC(year, month - 1, day);
+            }
+
+            function utcToDateString(timestamp) {
+                return new Date(timestamp).toISOString().slice(0, 10);
+            }
+
+            function isWorkingDay(dateString) {
+                const weekday = new Date(`${dateString}T00:00:00Z`).getUTCDay();
+                return weekday !== 0 && weekday !== 6 && !holidayDates.has(dateString);
+            }
+
+            function countWorkingDays(startDate, endDate) {
+                const start = dateToUtc(startDate);
+                const end = dateToUtc(endDate);
+                const totalDays = Math.floor((end - start) / millisecondsPerDay) + 1;
+                if (totalDays <= 0) return 0;
+
+                const fullWeeks = Math.floor(totalDays / 7);
+                let workingDays = fullWeeks * 5;
+                const remainder = totalDays % 7;
+                for (let day = 0; day < remainder; day++) {
+                    const date = utcToDateString(start + (fullWeeks * 7 + day) * millisecondsPerDay);
+                    if (isWorkingDay(date)) workingDays++;
+                }
+
+                for (const holidayDate of holidayDates) {
+                    if (holidayDate >= startDate
+                        && holidayDate <= endDate
+                        && isWorkingDay(holidayDate)) {
+                        workingDays--;
+                    }
+                }
+                return workingDays;
+            }
+
+            function updateNumberOfDaysFromDates() {
+                if (!startInput.value || !endInput.value) return;
+                if (endInput.value < startInput.value) {
+                    numberOfDaysInput.value = "";
+                    return;
+                }
+                numberOfDaysInput.value = countWorkingDays(startInput.value, endInput.value);
+            }
+
+            function updateEndDateFromNumberOfDays() {
+                const requestedDays = Number(numberOfDaysInput.value);
+                if (!startInput.value
+                    || !Number.isFinite(requestedDays)
+                    || requestedDays < 0.5
+                    || requestedDays > 365) {
+                    return;
+                }
+
+                let daysRemaining = Math.ceil(requestedDays);
+                let date = dateToUtc(startInput.value);
+                while (daysRemaining > 0) {
+                    const dateString = utcToDateString(date);
+                    if (isWorkingDay(dateString)) daysRemaining--;
+                    if (daysRemaining > 0) date += millisecondsPerDay;
+                }
+                endInput.value = utcToDateString(date);
+            }
+
+            startInput.addEventListener("change", updateNumberOfDaysFromDates);
+            endInput.addEventListener("change", updateNumberOfDaysFromDates);
+            numberOfDaysInput.addEventListener("input", updateEndDateFromNumberOfDays);
+        })();
+    </script>
+}

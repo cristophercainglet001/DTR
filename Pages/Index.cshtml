@@ -1,0 +1,67 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "DepEd DTR System";
+}
+
+<div class="home-page">
+    <section class="welcome-board home-hero mb-4" aria-labelledby="home-title">
+        <div class="welcome-board-copy">
+            <span class="welcome-tag">BACK TO SCHOOL · READY FOR A NEW DAY</span>
+            <h1 id="home-title">A fresh start for every school day.</h1>
+            <p>Keep attendance, staff records, and leave management organized in one place—so your school team can focus on what matters most.</p>
+            <div class="welcome-actions">
+                <a asp-page="/Admin/Login" class="btn btn-light">Admin login <span aria-hidden="true">→</span></a>
+                <a asp-page="/Employee/Login" class="home-hero-link">Staff sign in</a>
+            </div>
+        </div>
+        <div class="welcome-illustration" aria-hidden="true">
+            <div class="sun-shape"></div>
+            <div class="school-building">
+                <div class="school-roof"></div>
+                <div class="school-front">
+                    <div class="school-sign">WELCOME BACK</div>
+                    <div class="school-windows"><i></i><i></i><i></i></div>
+                    <div class="school-door"></div>
+                </div>
+                <div class="school-ground"></div>
+            </div>
+            <span class="floating-star star-one">✦</span>
+            <span class="floating-star star-two">✦</span>
+        </div>
+    </section>
+
+    <section aria-labelledby="home-features-title">
+        <div class="home-section-heading">
+            <div>
+                <p class="dashboard-eyebrow mb-1">MADE FOR SCHOOL TEAMS</p>
+                <h2 id="home-features-title">Your school day, in good order</h2>
+            </div>
+            <a asp-page="/DatabaseTest" class="home-status-link">Check system status <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <article class="home-feature-card">
+                    <span class="home-feature-icon home-feature-icon-green" aria-hidden="true">◷</span>
+                    <h3>Daily attendance</h3>
+                    <p>Record and review staff time entries with a clear, organized daily view.</p>
+                </article>
+            </div>
+            <div class="col-md-4">
+                <article class="home-feature-card">
+                    <span class="home-feature-icon home-feature-icon-gold" aria-hidden="true">▤</span>
+                    <h3>Staff records</h3>
+                    <p>Keep employee and school information together and easy to manage.</p>
+                </article>
+            </div>
+            <div class="col-md-4">
+                <article class="home-feature-card">
+                    <span class="home-feature-icon home-feature-icon-blue" aria-hidden="true">✎</span>
+                    <h3>Reports &amp; leave</h3>
+                    <p>Prepare monthly DTR reports and keep leave requests on track.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,165 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.ReportsModel
+@{
+    ViewData["Title"] = "DTR Reports";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 no-print">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">Administration</p>
+        <h1 class="mb-1">DTR Reports</h1>
+        <p class="text-secondary mb-0">Prepare one employee’s Form 48 or view all employees’ monthly attendance reports.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-page="/Admin/AttendanceImport" class="btn btn-primary">Import attendance log</a>
+        <a asp-page="/Admin/Dtr" class="btn btn-outline-secondary">Daily attendance</a>
+    </div>
+</div>
+
+<div class="card mb-4 no-print">
+    <div class="card-body p-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="col-lg-5">
+                <label for="employeeId" class="form-label">Employee</label>
+                <select id="employeeId" name="employeeId" asp-items="Model.EmployeeOptions" class="form-select">
+                    <option value="">Select an employee</option>
+                    <option value="all" selected="@(Model.IsAllEmployeesSelected)">All employees</option>
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label for="month" class="form-label">Month</label>
+                <select id="month" name="month" class="form-select">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month" selected="@(month == Model.Month)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label for="year" class="form-label">Year</label>
+                <input id="year" name="year" type="number" min="2000" max="9998" value="@Model.Year" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Generate Form 48</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert @(TempData["StatusTone"] as string == "warning" ? "alert-warning" : "alert-success") no-print" role="status">@statusMessage</div>
+}
+
+@if (Model.Report is not null || Model.Reports.Count > 0)
+{
+    <div class="d-flex justify-content-end mb-3 no-print">
+        <button type="button" class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
+    </div>
+    @if (Model.Report is not null)
+    {
+        <div class="d-flex justify-content-end mb-2 no-print">
+            <a href="@Model.Report.VerificationUrl" class="btn btn-outline-success">Verify report</a>
+        </div>
+        @if (Model.ReportEditor is not null)
+        {
+            <partial name="_DtrReportEditor" model="Model.ReportEditor" />
+        }
+        <partial name="_DtrForm48" model="Model.Report" />
+    }
+    @for (var reportIndex = 0; reportIndex < Model.Reports.Count; reportIndex++)
+    {
+        var report = Model.Reports[reportIndex];
+        <div class="d-flex justify-content-end mb-2 no-print">
+            <a href="@report.VerificationUrl" class="btn btn-outline-success">Verify @report.EmployeeName</a>
+        </div>
+        @if (reportIndex < Model.ReportEditors.Count)
+        {
+            <partial name="_DtrReportEditor" model="Model.ReportEditors[reportIndex]" />
+        }
+        <partial name="_DtrForm48" model="report" />
+    }
+}
+else if (Model.IsAllEmployeesSelected)
+{
+    <div class="card no-print">
+        <div class="card-body p-4 text-secondary">No employees are available to report.</div>
+    </div>
+}
+else
+{
+    <div class="card no-print">
+        <div class="card-body p-4 text-secondary">Choose an employee or all employees and a month to prepare the attendance reports.</div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const names = ["amTimeIn", "amTimeOut", "pmTimeIn", "pmTimeOut"];
+            document.querySelectorAll("[data-editor-modal]").forEach(modal => {
+                const rows = [...modal.querySelectorAll("tbody tr[data-date]")];
+                const field = (row, name) => row.querySelector(`input[name="${name}"]`);
+                const schedule = name => modal.querySelector(`[data-sched="${name}"]`).value;
+                const original = new Map(rows.map(row => [row, names.map(name => field(row, name).value)]));
+                const saveAll = modal.querySelector("[data-save-all]");
+                const counter = modal.querySelector("[data-dirty-count]");
+                const isDirty = row => names.some((name, index) => field(row, name).value !== original.get(row)[index]);
+
+                const refresh = () => {
+                    let count = 0;
+                    rows.forEach(row => {
+                        const dirty = isDirty(row);
+                        row.classList.toggle("att-row-dirty", dirty);
+                        if (dirty) count++;
+                    });
+                    saveAll.disabled = count === 0;
+                    counter.textContent = count ? `${count} day(s) changed` : "";
+                };
+
+                const fillRow = row => names.forEach(name => {
+                    const input = field(row, name);
+                    if (!input.value) input.value = schedule(name);
+                });
+
+                rows.forEach(row => {
+                    names.forEach(name => field(row, name).addEventListener("input", refresh));
+                    row.querySelector("[data-fill-row]").addEventListener("click", () => { fillRow(row); refresh(); });
+                });
+
+                modal.querySelector("[data-autofill-all]").addEventListener("click", () => {
+                    rows.forEach(row => {
+                        if (row.dataset.skip === "1") return;
+                        if (names.some(name => field(row, name).value)) return;
+                        fillRow(row);
+                    });
+                    refresh();
+                });
+
+                modal.querySelector(".att-bulk-form").addEventListener("submit", event => {
+                    const entries = rows.filter(isDirty).map(row => ({
+                        date: row.dataset.date,
+                        amTimeIn: field(row, "amTimeIn").value,
+                        amTimeOut: field(row, "amTimeOut").value,
+                        pmTimeIn: field(row, "pmTimeIn").value,
+                        pmTimeOut: field(row, "pmTimeOut").value,
+                    }));
+                    if (entries.length === 0) { event.preventDefault(); return; }
+                    modal.querySelector("[data-entries]").value = JSON.stringify(entries);
+                });
+
+                refresh();
+            });
+        });
+    </script>
+    @if (TempData["OpenEditor"] is int openEditorId)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const element = document.querySelector('[data-editor-modal="@openEditorId"]');
+                if (element) bootstrap.Modal.getOrCreateInstance(element).show();
+            });
+        </script>
+    }
+}

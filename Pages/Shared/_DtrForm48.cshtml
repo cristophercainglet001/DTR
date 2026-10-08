@@ -1,0 +1,105 @@
+@model DepEdDTRSystem.ViewModels.DtrForm48ViewModel
+
+<div class="form48-print-sheet" aria-label="A4 sheet with two Form 48 copies">
+    @for (var copyNumber = 0; copyNumber < 2; copyNumber++)
+    {
+        <section class="form48-copy" aria-label="Form 48 copy @(copyNumber + 1)">
+            <article class="dtr-form48">
+                <header class="form48-header">
+                    <div class="form48-republic">CIVIL SERVICE FORM No. 48</div>
+                    <div class="form48-title-box">
+                        <h2>Daily Time Record</h2>
+                        <div class="form48-employee-name">@Model.EmployeeName</div>
+                        <div class="form48-name-label">(Name)</div>
+                        <img class="form48-qr-code"
+                             src="@Model.VerificationQrCodeDataUri"
+                             alt="Scan to verify this Form 48" />
+                    </div>
+                    <div class="form48-period">
+                        <span>For the Month of:</span>
+                        <strong>@(new DateTime(Model.Year, Model.Month, 1).ToString("MMMM, yyyy").ToUpperInvariant())</strong>
+                    </div>
+                    <div class="form48-office-hours">
+                        <div><span>Official Hours for Arrival (Reg. Days)</span><span class="form48-office-hours-rule"></span></div>
+                        <div><span>and Departure (SAT)</span><span class="form48-office-hours-rule"></span></div>
+                    </div>
+                </header>
+
+                <table class="form48-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="form48-day" aria-label="Day number"></th>
+                            <th colspan="2">A.M.</th>
+                            <th colspan="2">P.M.</th>
+                            <th colspan="2">Undertime</th>
+                        </tr>
+                        <tr>
+                            <th>Arrival</th><th>Depart</th><th>Arrival</th><th>Depart</th><th>Hours</th><th>Min</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var day in Model.Days)
+                        {
+                            <tr class="@(day.Date.DayOfWeek == DayOfWeek.Saturday ? "form48-saturday" : day.Date.DayOfWeek == DayOfWeek.Sunday ? "form48-sunday" : null)">
+                                <td class="form48-day">
+                                    @day.Date.Day
+                                </td>
+                                @if (day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                                {
+                                    <td colspan="4" class="form48-weekend-label">
+                                        @(day.Date.DayOfWeek == DayOfWeek.Saturday ? "SATURDAY" : "SUNDAY")
+                                        @if (!string.IsNullOrEmpty(day.OnSeminarLabel))
+                                        {
+                                            <span class="form48-on-seminar">@day.OnSeminarLabel</span>
+                                        }
+                                    </td>
+                                    <td colspan="2"></td>
+                                }
+                                else if (!string.IsNullOrEmpty(day.OnLeaveLabel) || !string.IsNullOrEmpty(day.OnSeminarLabel))
+                                {
+                                    <td colspan="4" class="form48-on-leave">
+                                        @day.OnLeaveLabel
+                                        @if (!string.IsNullOrEmpty(day.OnLeaveLabel) && !string.IsNullOrEmpty(day.OnSeminarLabel))
+                                        {
+                                            <span> · </span>
+                                        }
+                                        @day.OnSeminarLabel
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                }
+                                else
+                                {
+                                    <td>@day.AmTimeIn</td>
+                                    <td>@day.AmTimeOut</td>
+                                    <td>@day.PmTimeIn</td>
+                                    <td>@day.PmTimeOut</td>
+                                    <td>@day.UndertimeHours</td>
+                                    <td>@day.UndertimeRemainderMinutes</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="5" class="text-end">TOTAL</th>
+                            <th>@Model.UndertimeHours</th>
+                            <th>@Model.UndertimeRemainderMinutes</th>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="form48-certification">
+                    <p>I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.</p>
+                    <div class="form48-verification">
+                        <strong class="form48-verification-employee">@Model.EmployeeName</strong>
+                        <span class="form48-verification-label">Verified as to the prescribed office hours</span>
+                        <span class="form48-signature-space" aria-label="Space for school head signature"></span>
+                        <strong class="form48-verification-name">@Model.SchoolHeadName</strong>
+                        <span class="form48-verification-title">@(string.IsNullOrWhiteSpace(Model.SchoolHeadPosition) ? "SCHOOL HEAD" : Model.SchoolHeadPosition)</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+    }
+</div>

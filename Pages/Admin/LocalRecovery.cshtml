@@ -1,0 +1,43 @@
+@page
+@model DepEdDTRSystem.Pages.Admin.LocalRecoveryModel
+@{
+    ViewData["Title"] = "Local admin recovery";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <p class="text-uppercase text-warning fw-semibold small mb-1">Local development only</p>
+                <h1 class="h3 mb-3">Recover admin access</h1>
+                <p class="text-secondary">
+                    This creates a strong temporary password for the admin account and sets its username to
+                    <strong>admin</strong>. You must choose a new password immediately after signing in.
+                    The temporary password is shown only once.
+                </p>
+
+                @if (Model.TemporaryPassword is not null)
+                {
+                    <div class="alert alert-success" role="status">
+                        <p class="mb-2">Copy this temporary password now. It will not be shown again.</p>
+                        <code class="user-select-all">@Model.TemporaryPassword</code>
+                    </div>
+                    <a asp-page="/Admin/Login" class="btn btn-primary w-100">Continue to admin sign-in</a>
+                }
+                else
+                {
+                    @if (Model.ErrorMessage is not null)
+                    {
+                        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+                    }
+                    <div class="alert alert-warning" role="alert">
+                        Use this only on the development computer. Do not share or reuse the temporary password.
+                    </div>
+                    <form method="post">
+                        <button type="submit" class="btn btn-danger w-100">Generate temporary admin password</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

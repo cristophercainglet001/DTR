@@ -1,0 +1,155 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.DashboardModel
+@{
+    ViewData["Title"] = "Employee Dashboard";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    static string T(TimeOnly? time) => time?.ToString("h:mm tt") ?? "—";
+    var record = Model.TodayRecord;
+}
+
+<section class="school-dashboard">
+    <header class="emp-hero">
+        <partial name="_EmployeeAvatar" model="Model.Avatar" />
+        <div class="emp-hero-copy">
+            <p class="dashboard-eyebrow mb-1">EMPLOYEE DASHBOARD · @Model.Today.ToString("dddd, MMMM d, yyyy")</p>
+            <h1>@greeting, @Model.Employee.FirstName!</h1>
+            <p class="emp-hero-meta">
+                <span class="emp-chip">@Model.Employee.Position</span>
+                @if (!string.IsNullOrWhiteSpace(Model.Employee.Department))
+                {
+                    <span class="emp-chip emp-chip-soft">@Model.Employee.Department</span>
+                }
+                <span class="emp-chip emp-chip-soft">ID @Model.Employee.EmployeeId</span>
+            </p>
+            <p class="emp-hero-school">@Model.Employee.School?.SchoolName</p>
+        </div>
+        <div class="emp-hero-actions">
+            <a asp-page="/Employee/Portal" class="btn btn-light">View my DTR <span aria-hidden="true">→</span></a>
+            <a asp-page="/Employee/Profile" class="welcome-text-link">Update my information</a>
+        </div>
+    </header>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="dashboard-panel h-100">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">TODAY</p>
+                        <h2 class="h5 mb-0">My attendance</h2>
+                    </div>
+                    <span class="panel-heading-icon" aria-hidden="true">◷</span>
+                </div>
+                @if (Model.IsWeekend)
+                {
+                    <p class="emp-empty">It’s the weekend. Enjoy your rest!</p>
+                }
+                else if (record is null)
+                {
+                    <p class="emp-empty">No time has been recorded for you yet today.</p>
+                }
+                else
+                {
+                    <div class="emp-time-grid">
+                        <div><small>Morning in</small><strong>@T(record.AmTimeIn)</strong></div>
+                        <div><small>Morning out</small><strong>@T(record.AmTimeOut)</strong></div>
+                        <div><small>Afternoon in</small><strong>@T(record.PmTimeIn)</strong></div>
+                        <div><small>Afternoon out</small><strong>@T(record.PmTimeOut)</strong></div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="row g-3 h-100">
+                <div class="col-sm-6">
+                    <div class="emp-stat emp-stat-green">
+                        <span class="emp-stat-label">Days recorded this month</span>
+                        <strong>@Model.DaysRecordedThisMonth</strong>
+                        <small>@Model.UndertimeMinutesThisMonth min undertime</small>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="emp-stat emp-stat-coral">
+                        <span class="emp-stat-label">Leave days approved (@Model.Today.Year)</span>
+                        <strong>@Model.ApprovedLeaveDaysThisYear.ToString("0.#")</strong>
+                        <small>@Model.PendingLeaveCount pending request@(Model.PendingLeaveCount == 1 ? "" : "s")</small>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="emp-stat emp-stat-blue">
+                        <span class="emp-stat-label">Seminar requests pending</span>
+                        <strong>@Model.PendingSeminarCount</strong>
+                        <small>Waiting for admin validation</small>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="emp-stat emp-stat-yellow">
+                        <span class="emp-stat-label">Upcoming approved</span>
+                        <strong>@Model.Upcoming.Count</strong>
+                        <small>Leave &amp; seminars ahead</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="dashboard-panel h-100">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">COMING UP</p>
+                        <h2 class="h5 mb-0">Upcoming leave &amp; seminars</h2>
+                    </div>
+                    <span class="panel-heading-icon" aria-hidden="true">✦</span>
+                </div>
+                @if (Model.Upcoming.Count == 0)
+                {
+                    <p class="emp-empty">Nothing scheduled. Approved leave and seminars will appear here.</p>
+                }
+                else
+                {
+                    <ul class="emp-upcoming">
+                        @foreach (var item in Model.Upcoming)
+                        {
+                            <li>
+                                <span class="emp-badge @(item.Kind == "Leave" ? "emp-badge-coral" : "emp-badge-blue")">@item.Kind</span>
+                                <span class="emp-upcoming-title">@item.Title</span>
+                                <span class="emp-upcoming-date">
+                                    @item.Start.ToString("MMM d")@(item.End != item.Start ? " – " + item.End.ToString("MMM d") : "")
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="dashboard-panel h-100">
+                <div class="panel-heading">
+                    <div>
+                        <p class="dashboard-eyebrow mb-1">QUICK ACTIONS</p>
+                        <h2 class="h5 mb-0">What would you like to do?</h2>
+                    </div>
+                </div>
+                <div class="shortcut-list">
+                    <a asp-page="/Employee/Leave" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-yellow" aria-hidden="true">✎</span>
+                        <span><strong>File a leave request</strong><small>Days are computed automatically</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a asp-page="/Employee/Seminars" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-blue" aria-hidden="true">▤</span>
+                        <span><strong>Submit a seminar</strong><small>Appears on your DTR once approved</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a asp-page="/Employee/Profile" class="shortcut-item">
+                        <span class="shortcut-icon shortcut-icon-green" aria-hidden="true">♧</span>
+                        <span><strong>Edit my information</strong><small>Photo, contact details &amp; password</small></span>
+                        <span class="shortcut-arrow" aria-hidden="true">→</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

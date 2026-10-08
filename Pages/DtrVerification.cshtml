@@ -1,0 +1,42 @@
+@page
+@model DepEdDTRSystem.Pages.DtrVerificationModel
+@{
+    ViewData["Title"] = "Form 48 Verification";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-8 col-xl-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <p class="text-uppercase text-success fw-semibold small mb-1">DepEd Daily Time Record</p>
+                <h1 class="h2 mb-4">Form 48 verification</h1>
+
+                @if (Model.IsVerified)
+                {
+                    <div class="alert alert-success mb-4" role="status">
+                        <h2 class="h5">Report verified</h2>
+                        <p class="mb-0">@Model.StatusMessage</p>
+                    </div>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Employee</dt>
+                        <dd class="col-sm-8">@Model.EmployeeName</dd>
+                        <dt class="col-sm-4">School</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.SchoolName) ? "Not specified" : Model.SchoolName)</dd>
+                        <dt class="col-sm-4">Report period</dt>
+                        <dd class="col-sm-8">@Model.ReportPeriod</dd>
+                        <dt class="col-sm-4">Issued (UTC)</dt>
+                        <dd class="col-sm-8">@Model.IssuedAtUtc.ToString("yyyy-MM-dd HH:mm")</dd>
+                    </dl>
+                    <p class="text-secondary small mt-4 mb-0">Daily attendance details are not displayed on this verification page.</p>
+                }
+                else
+                {
+                    <div class="alert alert-warning mb-0" role="status">
+                        <h2 class="h5">Unable to verify report</h2>
+                        <p class="mb-0">@Model.StatusMessage</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

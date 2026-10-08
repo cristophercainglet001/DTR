@@ -1,0 +1,103 @@
+@page
+@model DepEdDTRSystem.Pages.Employee.SeminarsModel
+@{
+    ViewData["Title"] = "My Seminars";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <p class="text-uppercase text-success fw-semibold small mb-1">Teacher &amp; employee portal</p>
+        <h1 class="mb-1">My seminars</h1>
+        <p class="text-secondary mb-0">Submit seminar details for administrator validation. Approved seminars appear on your DTR.</p>
+    </div>
+    <a asp-page="/Employee/Portal" class="btn btn-outline-secondary">Back to my DTR</a>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success" role="status">@statusMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Seminar information</h2>
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="Input.SeminarTitle" class="form-label">Seminar title</label>
+                        <input asp-for="Input.SeminarTitle" class="form-control" maxlength="200" />
+                        <span asp-validation-for="Input.SeminarTitle" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Organizer" class="form-label">Organizer</label>
+                        <input asp-for="Input.Organizer" class="form-control" maxlength="200" />
+                        <span asp-validation-for="Input.Organizer" class="text-danger small"></span>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6 mb-3">
+                            <label asp-for="Input.StartDate" class="form-label">Start date</label>
+                            <input asp-for="Input.StartDate" type="date" class="form-control" />
+                            <span asp-validation-for="Input.StartDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label asp-for="Input.EndDate" class="form-label">End date</label>
+                            <input asp-for="Input.EndDate" type="date" class="form-control" />
+                            <span asp-validation-for="Input.EndDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Venue" class="form-label">Venue</label>
+                        <input asp-for="Input.Venue" class="form-control" maxlength="300" />
+                        <span asp-validation-for="Input.Venue" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Purpose" class="form-label">Purpose</label>
+                        <textarea asp-for="Input.Purpose" class="form-control" rows="3" maxlength="1000"></textarea>
+                        <span asp-validation-for="Input.Purpose" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit for validation</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Seminar history</h2>
+                @if (Model.Applications.Count == 0)
+                {
+                    <p class="text-secondary mb-0">You have not submitted seminar information.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Seminar</th><th>Dates</th><th>Status</th><th>Admin remarks</th></tr></thead>
+                            <tbody>
+                                @foreach (var application in Model.Applications)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@application.SeminarTitle</strong>
+                                            <div class="small text-secondary">@application.Organizer · @application.Venue</div>
+                                        </td>
+                                        <td class="text-nowrap">@application.StartDate.ToString("MMM d, yyyy") – @application.EndDate.ToString("MMM d, yyyy")</td>
+                                        <td><span class="badge @(application.Status == "Approved" ? "text-bg-success" : application.Status == "Rejected" ? "text-bg-danger" : "text-bg-warning")">@application.Status</span></td>
+                                        <td>@(string.IsNullOrWhiteSpace(application.Remarks) ? "—" : application.Remarks)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
