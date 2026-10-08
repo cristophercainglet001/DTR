@@ -2922,3 +2922,6 @@ C:\Users\CRIS\AppData\Local\Temp\dtr-chk\DepEdDTRSystem.deps.json
 C:\Users\CRIS\AppData\Local\Temp\dtr-chk\DepEdDTRSystem.runtimeconfig.json
 C:\Users\CRIS\AppData\Local\Temp\dtr-chk\DepEdDTRSystem.dll
 C:\Users\CRIS\AppData\Local\Temp\dtr-chk\DepEdDTRSystem.pdb
+C:\Users\CRIS\Documents\WebProjects\DepEdDTRSystem\obj\Debug\net10.0\DepEdDTRSystem.sourcelink.json
+C:\Users\CRIS\Documents\WebProjects\DepEdDTRSystem\bin\Debug\net10.0\package-lock.json
+C:\Users\CRIS\Documents\WebProjects\DepEdDTRSystem\bin\Debug\net10.0\package.json
